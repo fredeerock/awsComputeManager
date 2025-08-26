@@ -1,0 +1,41 @@
+{
+  "name": "aws-compute-manager",
+  "version": "1.0.0",
+  "description": "A simple macOS app to start and stop AWS EC2 instances",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build-mac": "electron-builder --mac",
+    "install-deps": "npm install"
+  },
+  "keywords": [
+    "aws",
+    "ec2",
+    "electron",
+    "macos"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ec2": "^3.423.0",
+    "@aws-sdk/client-cloudwatch": "^3.423.0"
+  },
+  "build": {
+    "appId": "com.yourcompany.aws-compute-manager",
+    "productName": "AWS Compute Manager",
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.developer-tools",
+      "identity": null
+    }
+  }
+}

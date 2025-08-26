@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Compute Manager</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 AWS Compute Manager</h1>
+            <p>Manage your AWS EC2 instances with ease</p>
+        </header>
+
+        <div class="config-section" id="configSection">
+            <h2>AWS Configuration</h2>
+            <form id="awsConfigForm">
+                <div class="form-group">
+                    <label for="region">AWS Region:</label>
+                    <select id="region" required>
+                        <option value="">Select a region</option>
+                        <option value="us-east-1">US East (N. Virginia)</option>
+                        <option value="us-east-2">US East (Ohio)</option>
+                        <option value="us-west-1">US West (N. California)</option>
+                        <option value="us-west-2">US West (Oregon)</option>
+                        <option value="eu-west-1">Europe (Ireland)</option>
+                        <option value="eu-central-1">Europe (Frankfurt)</option>
+                        <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                        <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="accessKeyId">Access Key ID:</label>
+                    <input type="text" id="accessKeyId" required placeholder="Your AWS Access Key ID">
+                </div>
+                <div class="form-group">
+                    <label for="secretAccessKey">Secret Access Key:</label>
+                    <input type="password" id="secretAccessKey" required placeholder="Your AWS Secret Access Key">
+                </div>
+                <button type="submit" class="btn btn-primary">Configure AWS</button>
+            </form>
+        </div>
+
+        <div class="instance-section" id="instanceSection" style="display: none;">
+            <h2>Instance Management</h2>
+            
+            <div class="instance-list-section">
+                <h3>Select an Instance</h3>
+                <div class="form-group">
+                    <button id="loadInstancesBtn" class="btn btn-secondary">Load My Instances</button>
+                </div>
+                
+                <div id="instanceListContainer" style="display: none;">
+                    <div class="instance-grid" id="instanceGrid">
+                        <!-- Instance cards will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-card" id="statusCard">
+                <h3>Instance Status</h3>
+                <div class="status-info">
+                    <div class="status-item">
+                        <span class="label">State:</span>
+                        <span id="instanceState" class="status-badge">Select an instance</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Type:</span>
+                        <span id="instanceType">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Public IP:</span>
+                        <span id="publicIp">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Private IP:</span>
+                        <span id="privateIp">-</span>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 15px;">
+                    <button id="refreshBtn" class="btn btn-secondary">Refresh Status</button>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <div class="start-section">
+                    <button id="startBtn" class="btn btn-success">▶ Start Instance</button>
+                    <div class="auto-stop-option" id="autoStopOption" style="display: none;">
+                        <label for="autoStopTime">Auto-stop after:</label>
+                        <select id="autoStopTime">
+                            <option value="0">No auto-stop</option>
+                            <option value="30">30 minutes</option>
+                            <option value="60">1 hour</option>
+                            <option value="120">2 hours</option>
+                            <option value="240">4 hours</option>
+                            <option value="480">8 hours</option>
+                            <option value="custom">Custom...</option>
+                        </select>
+                        <input type="number" id="customStopTime" placeholder="Minutes" min="1" max="1440" style="display: none;">
+                        
+                        <div style="margin-top: 10px;">
+                            <label style="display: flex; align-items: center; font-size: 14px; gap: 8px;">
+                                <input type="checkbox" id="idleStopEnabled" style="width: auto;">
+                                <span>Also stop if idle (low CPU) for 5 minutes</span>
+                            </label>
+                            <small style="color: #6c757d; margin-left: 20px; font-size: 12px;">
+                                Stops instance when CPU usage is below 5% for 5 consecutive minutes
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <button id="stopBtn" class="btn btn-danger">⏹ Stop Instance</button>
+                <button id="terminateBtn" class="btn btn-danger" style="display: none;">🗑️ Terminate Instance</button>
+            </div>
+
+            <div id="autoStopStatusContainer"></div>
+
+            <div class="log-section">
+                <h3>Activity Log</h3>
+                <div id="logContainer" class="log-container"></div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
