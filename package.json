@@ -10,6 +10,7 @@
     "build-mac": "electron-builder --mac",
     "build-windows": "electron-builder --win",
     "build-all": "electron-builder --mac --win",
+    "release": "./scripts/create-release.sh",
     "install-deps": "npm install"
   },
   "keywords": [
