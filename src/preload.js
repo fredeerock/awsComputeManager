@@ -5,7 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSavedSettings: () => ipcRenderer.invoke('get-saved-settings'),
   listInstances: () => ipcRenderer.invoke('list-instances'),
   getInstanceStatus: (instanceId) => ipcRenderer.invoke('get-instance-status', instanceId),
-  startInstance: (instanceId, autoStopMinutes, idleStopEnabled) => ipcRenderer.invoke('start-instance', instanceId, autoStopMinutes, idleStopEnabled),
+  startInstance: (instanceId, autoStopMinutes) => ipcRenderer.invoke('start-instance', instanceId, autoStopMinutes),
   stopInstance: (instanceId) => ipcRenderer.invoke('stop-instance', instanceId),
   terminateInstance: (instanceId) => ipcRenderer.invoke('terminate-instance', instanceId)
 });

@@ -98,16 +98,6 @@
                             <option value="custom">Custom...</option>
                         </select>
                         <input type="number" id="customStopTime" placeholder="Minutes" min="1" max="1440" style="display: none;">
-                        
-                        <div style="margin-top: 10px;">
-                            <label style="display: flex; align-items: center; font-size: 14px; gap: 8px;">
-                                <input type="checkbox" id="idleStopEnabled" style="width: auto;">
-                                <span>Also stop if idle (low CPU) for 5 minutes</span>
-                            </label>
-                            <small style="color: #6c757d; margin-left: 20px; font-size: 12px;">
-                                Stops instance when CPU usage is below 5% for 5 consecutive minutes
-                            </small>
-                        </div>
                     </div>
                 </div>
                 <button id="stopBtn" class="btn btn-danger">⏹ Stop Instance</button>

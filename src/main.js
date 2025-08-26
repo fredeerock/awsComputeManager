@@ -207,7 +207,7 @@ ipcMain.handle('get-instance-status', async (event, instanceId) => {
 });
 
 // Start instance with optional auto-stop using CloudWatch Alarm
-ipcMain.handle('start-instance', async (event, instanceId, autoStopMinutes = null, idleStopEnabled = false) => {
+ipcMain.handle('start-instance', async (event, instanceId, autoStopMinutes = null) => {
   try {
     if (!ec2Client) {
       throw new Error('AWS not configured');
@@ -231,15 +231,6 @@ ipcMain.handle('start-instance', async (event, instanceId, autoStopMinutes = nul
       }
     }
     
-    // Idle-based auto-stop alarm
-    if (idleStopEnabled) {
-      try {
-        await createIdleStopAlarm(instanceId);
-      } catch (scheduleError) {
-        scheduleErrors.push(`Idle detection: ${scheduleError.message}`);
-      }
-    }
-    
     if (scheduleErrors.length > 0) {
       return { 
         success: true, 
@@ -248,10 +239,9 @@ ipcMain.handle('start-instance', async (event, instanceId, autoStopMinutes = nul
       };
     }
     
-    if (autoStopMinutes > 0 || idleStopEnabled) {
+    if (autoStopMinutes > 0) {
       let features = [];
       if (autoStopMinutes > 0) features.push(`stops after ${autoStopMinutes} minutes`);
-      if (idleStopEnabled) features.push('stops when idle');
       
       return { 
         success: true, 
@@ -312,50 +302,6 @@ async function createAutoStopAlarm(instanceId, minutes) {
   
   console.log(`CloudWatch auto-stop alarm created: ${alarmName}`);
   console.log(`Instance ${instanceId} will be stopped at approximately ${targetTime.toISOString()}`);
-}
-
-// Create CloudWatch alarm to stop instance when idle (low CPU usage)
-async function createIdleStopAlarm(instanceId) {
-  if (!cloudWatchClient) {
-    throw new Error('CloudWatch not configured');
-  }
-
-  if (!awsRegion) {
-    throw new Error('AWS region not configured');
-  }
-
-  const alarmName = `IdleStop-${instanceId}-${Date.now()}`;
-  
-  // Create an alarm that triggers when CPU usage is low for 5 consecutive minutes
-  const alarmParams = {
-    AlarmName: alarmName,
-    AlarmDescription: `Auto-stop ${instanceId} when idle (CPU < 5% for 5 minutes)`,
-    ActionsEnabled: true,
-    AlarmActions: [
-      `arn:aws:automate:${awsRegion}:ec2:stop`
-    ],
-    MetricName: 'CPUUtilization',
-    Namespace: 'AWS/EC2',
-    Statistic: 'Average',
-    Dimensions: [
-      {
-        Name: 'InstanceId',
-        Value: instanceId
-      }
-    ],
-    Period: 60, // 1-minute periods
-    EvaluationPeriods: 5, // 5 consecutive periods = 5 minutes
-    Threshold: 5.0, // 5% CPU utilization
-    ComparisonOperator: 'LessThanThreshold',
-    TreatMissingData: 'breaching', // Treat missing data as low CPU
-    DatapointsToAlarm: 5 // All 5 datapoints must be below threshold
-  };
-
-  const command = new PutMetricAlarmCommand(alarmParams);
-  await cloudWatchClient.send(command);
-  
-  console.log(`CloudWatch idle-stop alarm created: ${alarmName}`);
-  console.log(`Instance ${instanceId} will be stopped when CPU < 5% for 5 consecutive minutes`);
 }
 
 // Stop instance

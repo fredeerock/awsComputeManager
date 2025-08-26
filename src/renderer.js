@@ -232,7 +232,6 @@ class AWSComputeManager {
         // Get auto-stop time
         const autoStopSelect = document.getElementById('autoStopTime');
         const customStopTime = document.getElementById('customStopTime');
-        const idleStopEnabled = document.getElementById('idleStopEnabled').checked;
         
         let autoStopMinutes = 0;
         if (autoStopSelect.value === 'custom') {
@@ -244,30 +243,26 @@ class AWSComputeManager {
         this.showLoading(true);
         
         let logMessage = `Starting instance ${this.currentInstanceId}`;
-        if (autoStopMinutes > 0 && idleStopEnabled) {
-            logMessage += ` with auto-stop after ${autoStopMinutes} minutes and idle detection`;
-        } else if (autoStopMinutes > 0) {
+        if (autoStopMinutes > 0) {
             logMessage += ` with auto-stop after ${autoStopMinutes} minutes`;
-        } else if (idleStopEnabled) {
-            logMessage += ` with idle detection (stops if idle for 5 minutes)`;
         }
         this.addLogEntry(logMessage + '...', 'info');
 
         try {
-            const result = await window.electronAPI.startInstance(this.currentInstanceId, autoStopMinutes, idleStopEnabled);
+            const result = await window.electronAPI.startInstance(this.currentInstanceId, autoStopMinutes);
             
             if (result.success) {
                 this.addLogEntry(`Start command sent successfully`, 'success');
                 
                 if (result.autoStop === true && result.features) {
                     this.addLogEntry(`✅ Auto-stop configured: ${result.features}`, 'success');
-                    this.showAutoStopScheduled(autoStopMinutes, idleStopEnabled, result.features);
+                    this.showAutoStopScheduled(autoStopMinutes, result.features);
                 } else if (result.autoStop === true && result.stopTime) {
                     this.addLogEntry(`✅ Auto-stop scheduled for ${result.stopTime}`, 'success');
-                    this.showAutoStopScheduled(autoStopMinutes, idleStopEnabled);
+                    this.showAutoStopScheduled(autoStopMinutes);
                 } else if (result.autoStop === 'pending' && result.stopTime) {
                     this.addLogEntry(`⏳ Auto-stop will be scheduled once instance is running (target: ${result.stopTime})`, 'info');
-                    this.showAutoStopPending(autoStopMinutes, idleStopEnabled);
+                    this.showAutoStopPending(autoStopMinutes);
                 } else if (result.autoStop === false && result.scheduleError) {
                     this.addLogEntry(`⚠️ Instance started but auto-stop scheduling failed: ${result.scheduleError}`, 'error');
                     this.showAutoStopError(result.scheduleError);
@@ -285,7 +280,7 @@ class AWSComputeManager {
         }
     }
 
-    showAutoStopScheduled(minutes, idleEnabled = false, features = null) {
+    showAutoStopScheduled(minutes, features = null) {
         const statusContainer = document.getElementById('autoStopStatusContainer');
         
         // Remove any existing scheduled notice
@@ -307,17 +302,13 @@ class AWSComputeManager {
                 const stopTime = new Date(Date.now() + minutes * 60 * 1000);
                 message += `Instance will stop at ${stopTime.toLocaleTimeString()} (${minutes} minutes)`;
             }
-            if (idleEnabled) {
-                if (minutes > 0) message += '<br>';
-                message += 'Instance will also stop if idle (CPU < 5%) for 5 minutes';
-            }
         }
         
         scheduledDiv.innerHTML = message;
         statusContainer.appendChild(scheduledDiv);
     }
 
-    showAutoStopPending(minutes, idleEnabled = false) {
+    showAutoStopPending(minutes) {
         const statusContainer = document.getElementById('autoStopStatusContainer');
         
         // Remove any existing notice
@@ -335,10 +326,6 @@ class AWSComputeManager {
         if (minutes > 0) {
             const stopTime = new Date(Date.now() + minutes * 60 * 1000);
             message += `Will be scheduled once instance is fully running (target: ${stopTime.toLocaleTimeString()})`;
-        }
-        if (idleEnabled) {
-            if (minutes > 0) message += '<br>';
-            message += 'Idle detection will also be enabled (stops if CPU < 5% for 5 minutes)';
         }
         
         pendingDiv.innerHTML = message;
