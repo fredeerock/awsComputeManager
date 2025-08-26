@@ -1,16 +1,93 @@
 # AWS Compute Manager
 
-A simple macOS application built with Electron that allows you to easily start and stop your AWS EC2 instances.
+A cross-platform desktop application for managing AWS EC2 instances with a simple, intuitive interface.
 
-## Features
+![Version](https://img.shields.io/github/v/release/fredeerock/awsComputeManager)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-- 🚀 Simple, intuitive GUI for managing EC2 instances
-- ⚡ Quick start/stop functionality
-- ⏰ **Auto-stop scheduling** - Set instances to automatically stop after a specified time
-- 📊 Real-time instance status monitoring
-- 🔐 Secure AWS credential management
-- 📱 Modern, responsive design
-- 📝 Activity logging
+## 🚀 Features
+
+- **Visual Instance Management**: Start, stop, and terminate EC2 instances with a clean UI
+- **Spot Instance Support**: Proper handling of spot instances with terminate functionality
+- **Auto-Stop Features**: CloudWatch-based time limits and CPU idle detection
+- **Cross-Platform**: Universal macOS (Intel + Apple Silicon) and Windows support
+- **Settings Persistence**: Remembers AWS credentials and region between sessions
+- **Real-time Status**: Live instance state monitoring and refresh
+
+## 📦 Download
+
+Visit the [Releases](https://github.com/fredeerock/awsComputeManager/releases) page to download the latest version:
+
+### macOS
+- **Universal DMG**: Works on Intel and Apple Silicon Macs
+- **Apple Silicon DMG**: Optimized for M1/M2/M3 Macs
+
+### Windows
+- **Installer**: Traditional Windows setup with shortcuts
+- **Portable**: Single executable, no installation required
+
+## 🔧 Installation
+
+### macOS
+1. Download the appropriate DMG file from releases
+2. Mount the DMG and drag the app to Applications folder
+3. **Important**: Right-click the app and select "Open" on first launch
+4. Click "Open" in the security dialog
+
+### Windows
+1. Download the installer or portable version
+2. Run the executable and follow installation steps
+
+## 🛡️ macOS Security Warning
+
+When first opening the app on macOS, you may see:
+
+> **"Apple could not verify AWS Compute Manager is free of malware"**
+
+This is normal for unsigned applications. To resolve:
+
+### Method 1 (Recommended)
+1. **Right-click** on "AWS Compute Manager.app"
+2. Select **"Open"** from the context menu
+3. Click **"Open"** in the security dialog
+
+### Method 2
+1. Go to **System Settings** → **Privacy & Security**
+2. Find the notification about the blocked app
+3. Click **"Open Anyway"**
+
+### Method 3 (Terminal)
+```bash
+sudo xattr -dr com.apple.quarantine "/Applications/AWS Compute Manager.app"
+```
+
+## ⚙️ Setup & Usage
+
+1. **Launch** AWS Compute Manager
+2. **Enter AWS Credentials**:
+   - AWS Access Key ID
+   - AWS Secret Access Key
+   - Select your preferred region
+3. **Load Instances**: Click "Load Instances" to see your EC2 instances
+4. **Manage Instances**: Select an instance and use Start/Stop/Terminate buttons
+
+### Auto-Stop Features
+- **Time-based**: Set a timer to automatically stop instances
+- **Idle Detection**: Stop instances when CPU usage is low for 5+ minutes
+
+## � Requirements
+
+- **AWS Account** with EC2 access permissions
+- **AWS Credentials** (Access Key ID and Secret Access Key)
+- **Operating System**: macOS 10.12+ or Windows 7+
+
+## 🔒 Privacy & Security
+
+- **Local Storage**: All data stored locally on your machine
+- **No Telemetry**: No usage data sent to third parties
+- **Open Source**: Code available for security review
+- **AWS Direct**: Communicates directly with AWS APIs
 
 ## Prerequisites
 

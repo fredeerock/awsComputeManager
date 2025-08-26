@@ -43,7 +43,12 @@ done
 echo ""
 
 # Create release notes
-RELEASE_NOTES="## AWS Compute Manager v$VERSION
+if [ -f "RELEASE_NOTES_TEMPLATE.md" ]; then
+    # Use template and replace version
+    RELEASE_NOTES=$(sed "s/v1.0.0/v$VERSION/g" RELEASE_NOTES_TEMPLATE.md)
+else
+    # Fallback to original notes
+    RELEASE_NOTES="## AWS Compute Manager v$VERSION
 
 ### 🚀 Features
 - **Cross-Platform Support**: Universal macOS (Intel + Apple Silicon) and Windows binaries
@@ -52,41 +57,24 @@ RELEASE_NOTES="## AWS Compute Manager v$VERSION
 - **Auto-Stop Features**: CloudWatch-based time limits and CPU idle detection
 - **Settings Persistence**: Remembers AWS credentials and region between sessions
 
-### 📦 Downloads
+### �️ Security Notice for macOS Users
 
-#### macOS
-- **Universal DMG** (Intel + Apple Silicon): \`AWS Compute Manager-${VERSION}.dmg\`
-- **Apple Silicon DMG** (M1/M2/M3): \`AWS Compute Manager-${VERSION}-arm64.dmg\`
+**You may see a warning: \"Apple could not verify AWS Compute Manager is free of malware\"**
 
-#### Windows
-- **Installer** (Recommended): \`AWS Compute Manager Setup ${VERSION}.exe\`
-- **Portable** (No installation): \`AWS Compute Manager-${VERSION}-portable.exe\`
+This is normal for unsigned applications. To resolve:
 
-### 🔧 Installation
+**Option 1 (Recommended):**
+1. Right-click on \"AWS Compute Manager.app\"
+2. Select \"Open\" from the context menu
+3. Click \"Open\" in the security dialog
 
-#### macOS
-1. Download the appropriate DMG file
-2. Mount the DMG and drag the app to Applications folder
-3. Run the app (you may need to allow it in Security & Privacy settings)
+**Option 2:**
+1. Go to System Settings → Privacy & Security
+2. Find the notification about the blocked app
+3. Click \"Open Anyway\"
 
-#### Windows
-1. Download the installer or portable version
-2. For installer: Run the .exe and follow the setup wizard
-3. For portable: Just run the .exe file directly
-
-### ⚙️ Setup
-1. Launch AWS Compute Manager
-2. Enter your AWS Access Key ID and Secret Access Key
-3. Select your preferred AWS region
-4. Click 'Load Instances' to see your EC2 instances
-
-### 📋 Requirements
-- AWS account with EC2 access
-- AWS credentials (Access Key ID and Secret Access Key)
-- macOS 10.12+ or Windows 7+
-
-### 🛡️ Security Note
-This is an unsigned application. On macOS, you may need to right-click and select 'Open' the first time you run it."
+This app is open source and safe to use."
+fi
 
 echo -e "${BLUE}📝 Release notes preview:${NC}"
 echo "$RELEASE_NOTES" | head -10
