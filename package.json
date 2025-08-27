@@ -1,6 +1,6 @@
 {
   "name": "aws-compute-manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A simple macOS app to start and stop AWS EC2 instances",
   "main": "src/main.js",
   "scripts": {
