@@ -9,6 +9,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stopInstance: (instanceId) => ipcRenderer.invoke('stop-instance', instanceId),
   terminateInstance: (instanceId) => ipcRenderer.invoke('terminate-instance', instanceId),
   
+  // RDP connection
+  launchRDP: (publicIp) => ipcRenderer.invoke('launch-rdp', publicIp),
+  
   // Secure credential storage
   storeCredentialsSecure: (accessKeyId, secretAccessKey, region) => 
     ipcRenderer.invoke('store-credentials-secure', accessKeyId, secretAccessKey, region),

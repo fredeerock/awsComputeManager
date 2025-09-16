@@ -25,6 +25,7 @@ class AWSComputeManager {
         document.getElementById('refreshBtn').addEventListener('click', this.refreshInstanceStatus.bind(this));
         document.getElementById('startBtn').addEventListener('click', this.startInstance.bind(this));
         document.getElementById('stopBtn').addEventListener('click', this.stopInstance.bind(this));
+        document.getElementById('rdpBtn').addEventListener('click', this.launchRDP.bind(this));
         document.getElementById('terminateBtn').addEventListener('click', this.terminateInstance.bind(this));
         
         // Auto-stop controls
@@ -495,6 +496,59 @@ class AWSComputeManager {
         document.getElementById('terminateBtn').style.display = 'none';
     }
 
+    async launchRDP() {
+        if (!this.currentInstanceId) {
+            this.addLogEntry('Please select an instance first', 'error');
+            return;
+        }
+
+        // Get the current public IP from the status display
+        const publicIpElement = document.getElementById('publicIp');
+        const publicIp = publicIpElement.textContent;
+
+        if (!publicIp || publicIp === '-') {
+            this.addLogEntry('No public IP address available for RDP connection', 'error');
+            this.addLogEntry('💡 Make sure the instance is running and has a public IP assigned', 'info');
+            return;
+        }
+
+        this.showLoading(true);
+        this.addLogEntry(`Launching RDP session to ${publicIp}...`, 'info');
+
+        try {
+            const result = await window.electronAPI.launchRDP(publicIp);
+            
+            if (result.success) {
+                this.addLogEntry(`✅ RDP session launched successfully to ${result.publicIp}`, 'success');
+                this.addLogEntry('💡 Check your taskbar or applications for the Remote Desktop window', 'info');
+            } else {
+                this.addLogEntry(`❌ Failed to launch RDP session: ${result.error}`, 'error');
+                
+                if (result.helpMessage) {
+                    this.addLogEntry(`💡 ${result.helpMessage}`, 'info');
+                }
+                
+                if (result.installInstructions) {
+                    this.addLogEntry(`📱 ${result.installInstructions}`, 'info');
+                }
+                
+                // Additional helpful information
+                this.addLogEntry(`💡 Target IP: ${result.publicIp || publicIp}`, 'info');
+                
+                // Platform-specific advice
+                if (navigator.platform.indexOf('Mac') !== -1) {
+                    this.addLogEntry('💡 For macOS: Install Microsoft Remote Desktop from the App Store for best results', 'info');
+                } else {
+                    this.addLogEntry('💡 Make sure port 3389 is open in your security group and Windows is configured for RDP', 'info');
+                }
+            }
+        } catch (error) {
+            this.addLogEntry(`RDP launch error: ${error.message}`, 'error');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
     updateStatusDisplay(data) {
         const stateElement = document.getElementById('instanceState');
         const typeElement = document.getElementById('instanceType');
@@ -511,6 +565,7 @@ class AWSComputeManager {
         // Update button states
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
+        const rdpBtn = document.getElementById('rdpBtn');
         const terminateBtn = document.getElementById('terminateBtn');
 
         // Hide terminate button by default
@@ -519,6 +574,7 @@ class AWSComputeManager {
         if (data.state === 'running') {
             startBtn.disabled = true;
             stopBtn.disabled = false;
+            rdpBtn.disabled = !data.publicIp; // Enable RDP only if public IP exists
             
             // Show terminate button for spot instances
             if (data.isSpotInstance) {
@@ -527,10 +583,12 @@ class AWSComputeManager {
         } else if (data.state === 'stopped') {
             startBtn.disabled = false;
             stopBtn.disabled = true;
+            rdpBtn.disabled = true; // Disable RDP when instance is stopped
         } else {
             // Pending, stopping, etc.
             startBtn.disabled = true;
             stopBtn.disabled = true;
+            rdpBtn.disabled = true; // Disable RDP when instance is transitioning
         }
     }
 
@@ -543,6 +601,7 @@ class AWSComputeManager {
         
         document.getElementById('startBtn').disabled = true;
         document.getElementById('stopBtn').disabled = true;
+        document.getElementById('rdpBtn').disabled = true;
         document.getElementById('terminateBtn').style.display = 'none';
     }
 

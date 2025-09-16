@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const keytar = require('keytar');
+const { exec, spawn } = require('child_process');
 
 let mainWindow;
 let ec2Client;
@@ -454,6 +455,223 @@ ipcMain.handle('delete-credentials-secure', async (event) => {
     return { success: true };
   } catch (error) {
     console.error('Failed to delete secure credentials:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Launch RDP session to EC2 instance
+ipcMain.handle('launch-rdp', async (event, publicIp) => {
+  try {
+    if (!publicIp) {
+      throw new Error('No public IP address available for RDP connection');
+    }
+
+    const platform = process.platform;
+    console.log(`Platform: ${platform}, Target IP: ${publicIp}`);
+
+    if (platform === 'win32') {
+      // Windows: Try the most basic approach possible
+      console.log('Attempting basic Windows RDP launch...');
+      
+      return new Promise((resolve) => {
+        // Try using exec with shell: true and proper Windows command
+        const command = `mstsc.exe /v:${publicIp}`;
+        console.log(`Executing: ${command}`);
+        
+        exec(command, { shell: true, windowsHide: false }, (error, stdout, stderr) => {
+          console.log('exec callback called');
+          console.log('error:', error);
+          console.log('stdout:', stdout);
+          console.log('stderr:', stderr);
+          
+          if (error) {
+            console.error('RDP exec error:', error);
+            
+            // Try alternative approach with full path
+            const altCommand = `"C:\\Windows\\System32\\mstsc.exe" /v:${publicIp}`;
+            console.log(`Trying alternative: ${altCommand}`);
+            
+            exec(altCommand, { shell: true, windowsHide: false }, (altError, altStdout, altStderr) => {
+              console.log('Alternative exec callback called');
+              console.log('altError:', altError);
+              console.log('altStdout:', altStdout);
+              console.log('altStderr:', altStderr);
+              
+              if (altError) {
+                resolve({ 
+                  success: false, 
+                  error: `Both attempts failed. First: ${error.message}, Second: ${altError.message}`,
+                  helpMessage: 'Unable to launch Remote Desktop Connection. Please try running "mstsc /v:' + publicIp + '" manually from Command Prompt.',
+                  publicIp: publicIp,
+                  debugInfo: {
+                    command1: command,
+                    command2: altCommand,
+                    error1: error.message,
+                    error2: altError.message
+                  }
+                });
+              } else {
+                console.log('Alternative command succeeded');
+                resolve({ 
+                  success: true, 
+                  message: `RDP session launched to ${publicIp}`,
+                  publicIp: publicIp
+                });
+              }
+            });
+          } else {
+            console.log('Primary command succeeded');
+            resolve({ 
+              success: true, 
+              message: `RDP session launched to ${publicIp}`,
+              publicIp: publicIp
+            });
+          }
+        });
+      });
+      
+    } else {
+      // Non-Windows platforms
+      if (platform === 'darwin') {
+        // macOS: Create RDP file and open it
+        console.log('Creating RDP file for macOS...');
+        
+        return new Promise((resolve) => {
+          const tempDir = os.tmpdir();
+          const rdpFileName = `aws-ec2-${publicIp.replace(/\./g, '-')}-${Date.now()}.rdp`;
+          const rdpFilePath = path.join(tempDir, rdpFileName);
+          
+          // Create RDP file content compatible with macOS RDP clients
+          const rdpContent = [
+            'screen mode id:i:2',
+            'use multimon:i:0',
+            'desktopwidth:i:1920',
+            'desktopheight:i:1080',
+            'session bpp:i:32',
+            'compression:i:1',
+            'keyboardhook:i:2',
+            'audiocapturemode:i:0',
+            'videoplaybackmode:i:1',
+            'connection type:i:7',
+            'networkautodetect:i:1',
+            'bandwidthautodetect:i:1',
+            'displayconnectionbar:i:1',
+            'disable wallpaper:i:0',
+            'allow font smoothing:i:0',
+            'allow desktop composition:i:0',
+            'disable full window drag:i:1',
+            'disable menu anims:i:1',
+            'disable themes:i:0',
+            'bitmapcachepersistenable:i:1',
+            `full address:s:${publicIp}`,
+            'authentication level:i:2',
+            'prompt for credentials:i:1',
+            'negotiate security layer:i:1',
+            'remoteapplicationmode:i:0',
+            'alternate shell:s:',
+            'shell working directory:s:',
+            'gatewayhostname:s:',
+            'gatewayusagemethod:i:4',
+            'gatewaycredentialssource:i:4',
+            'promptcredentialonce:i:0',
+            'use redirection server name:i:0'
+          ].join('\r\n');
+          
+          try {
+            fs.writeFileSync(rdpFilePath, rdpContent, 'utf8');
+            console.log(`RDP file created: ${rdpFilePath}`);
+            
+            // Open the RDP file with the default application
+            exec(`open "${rdpFilePath}"`, (error, stdout, stderr) => {
+              if (error) {
+                console.error('RDP file open error:', error);
+                // Clean up the temp file
+                try { fs.unlinkSync(rdpFilePath); } catch (e) {}
+                
+                resolve({ 
+                  success: false, 
+                  error: error.message,
+                  helpMessage: 'Failed to open RDP file. Make sure you have an RDP client installed (Microsoft Remote Desktop recommended).',
+                  publicIp: publicIp,
+                  installInstructions: 'Microsoft Remote Desktop: https://apps.apple.com/app/microsoft-remote-desktop/id1295203466'
+                });
+              } else {
+                console.log('RDP file opened successfully');
+                
+                // Clean up the temp file after a delay
+                setTimeout(() => {
+                  try { 
+                    fs.unlinkSync(rdpFilePath); 
+                    console.log('Temp RDP file cleaned up');
+                  } catch (e) {
+                    console.log('Could not clean up temp file:', e.message);
+                  }
+                }, 10000); // Wait 10 seconds before cleanup
+                
+                resolve({ 
+                  success: true, 
+                  message: `RDP file opened for ${publicIp}`,
+                  publicIp: publicIp
+                });
+              }
+            });
+            
+          } catch (fileError) {
+            console.error('Failed to create RDP file:', fileError);
+            resolve({ 
+              success: false, 
+              error: 'Failed to create RDP connection file',
+              helpMessage: 'Unable to create temporary RDP file. Please try connecting manually to: ' + publicIp,
+              publicIp: publicIp
+            });
+          }
+        });
+      } else {
+        // Linux and other platforms
+        let command;
+        switch (platform) {
+          case 'linux':
+            command = `rdesktop ${publicIp} 2>/dev/null || xfreerdp /v:${publicIp} 2>/dev/null || krdc rdp://${publicIp}`;
+            break;
+          default:
+            throw new Error(`RDP connections not supported on platform: ${platform}`);
+        }
+
+        console.log(`Launching RDP session: ${command}`);
+        
+        return new Promise((resolve) => {
+          exec(command, (error, stdout, stderr) => {
+            if (error) {
+              console.error('RDP launch error:', error);
+              
+              let helpMessage = '';
+              switch (platform) {
+                case 'linux':
+                  helpMessage = 'Make sure an RDP client is installed (rdesktop, xfreerdp, or krdc).';
+                  break;
+              }
+              
+              resolve({ 
+                success: false, 
+                error: error.message,
+                helpMessage: helpMessage,
+                publicIp: publicIp
+              });
+            } else {
+              console.log('RDP session launched successfully');
+              resolve({ 
+                success: true, 
+                message: `RDP session launched to ${publicIp}`,
+                publicIp: publicIp
+              });
+            }
+          });
+        });
+      }
+    }
+
+  } catch (error) {
+    console.error('RDP launch error:', error);
     return { success: false, error: error.message };
   }
 });

@@ -204,6 +204,15 @@ header p {
     align-self: flex-start;
 }
 
+.action-buttons #rdpBtn {
+    align-self: flex-start;
+    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+}
+
+.action-buttons #rdpBtn:hover {
+    background: linear-gradient(135deg, #357abd 0%, #2968a3 100%);
+}
+
 .auto-stop-option {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
