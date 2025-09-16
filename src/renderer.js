@@ -4,6 +4,7 @@ class AWSComputeManager {
         this.isConfigured = false;
         this.refreshInterval = null;
         this.initializeEventListeners();
+        this.checkForSavedCredentials();
         this.loadSavedSettings();
     }
 
@@ -20,6 +21,10 @@ class AWSComputeManager {
         
         // Auto-stop controls
         document.getElementById('autoStopTime').addEventListener('change', this.handleAutoStopChange.bind(this));
+        
+        // Secure credential controls
+        document.getElementById('loadSavedCredentialsBtn').addEventListener('click', this.loadSavedCredentials.bind(this));
+        document.getElementById('deleteSavedCredentialsBtn').addEventListener('click', this.deleteSavedCredentials.bind(this));
     }
 
     async loadSavedSettings() {
@@ -59,6 +64,8 @@ class AWSComputeManager {
             secretAccessKey: document.getElementById('secretAccessKey').value
         };
 
+        const saveSecurely = document.getElementById('saveCredentialsSecure').checked;
+
         try {
             const result = await window.electronAPI.configureAWS(config);
             
@@ -70,6 +77,28 @@ class AWSComputeManager {
                     message += ' (settings saved for next time)';
                 }
                 this.addLogEntry(message, 'success');
+                
+                // Save credentials securely if checkbox is checked
+                if (saveSecurely) {
+                    try {
+                        const secureResult = await window.electronAPI.storeCredentialsSecure(
+                            config.accessKeyId, 
+                            config.secretAccessKey, 
+                            config.region
+                        );
+                        
+                        if (secureResult.success) {
+                            this.showSecureCredentialsStatus('🔐 Credentials saved securely with biometric protection', 'success');
+                            // Show the saved credentials section for next time
+                            document.getElementById('savedCredentialsSection').style.display = 'block';
+                        } else {
+                            this.showSecureCredentialsStatus('⚠️ Failed to save credentials securely: ' + secureResult.error, 'error');
+                        }
+                    } catch (secureError) {
+                        this.showSecureCredentialsStatus('⚠️ Error saving credentials securely: ' + secureError.message, 'error');
+                    }
+                }
+                
                 // Automatically load instances after successful configuration
                 setTimeout(() => this.loadInstances(), 1000);
             } else {
@@ -527,6 +556,91 @@ class AWSComputeManager {
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
             this.refreshInterval = null;
+        }
+    }
+
+    // Secure Credential Management
+    async checkForSavedCredentials() {
+        try {
+            const result = await window.electronAPI.checkSecureCredentials();
+            const savedCredentialsSection = document.getElementById('savedCredentialsSection');
+            
+            if (result.success && result.hasCredentials) {
+                savedCredentialsSection.style.display = 'block';
+            } else {
+                savedCredentialsSection.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error checking for saved credentials:', error);
+        }
+    }
+
+    async loadSavedCredentials() {
+        try {
+            this.showSecureCredentialsStatus('Loading saved credentials...', 'info');
+            
+            const result = await window.electronAPI.retrieveCredentialsSecure();
+            
+            if (result.success && result.credentials) {
+                const { accessKeyId, secretAccessKey, region } = result.credentials;
+                
+                // Fill form fields
+                document.getElementById('region').value = region;
+                document.getElementById('accessKeyId').value = accessKeyId;
+                document.getElementById('secretAccessKey').value = secretAccessKey;
+                
+                this.showSecureCredentialsStatus('✅ Credentials loaded successfully from secure storage', 'success');
+                
+                // Auto-configure AWS with loaded credentials
+                setTimeout(() => {
+                    this.handleAWSConfig({ preventDefault: () => {} });
+                }, 1000);
+                
+            } else {
+                this.showSecureCredentialsStatus('❌ Failed to load saved credentials: ' + (result.error || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            this.showSecureCredentialsStatus('❌ Error loading credentials: ' + error.message, 'error');
+        }
+    }
+
+    async deleteSavedCredentials() {
+        if (!confirm('Are you sure you want to delete your saved credentials? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            this.showSecureCredentialsStatus('Deleting saved credentials...', 'info');
+            
+            const result = await window.electronAPI.deleteCredentialsSecure();
+            
+            if (result.success) {
+                this.showSecureCredentialsStatus('✅ Saved credentials deleted successfully', 'success');
+                document.getElementById('savedCredentialsSection').style.display = 'none';
+                
+                // Clear form fields
+                document.getElementById('accessKeyId').value = '';
+                document.getElementById('secretAccessKey').value = '';
+                document.getElementById('saveCredentialsSecure').checked = false;
+                
+            } else {
+                this.showSecureCredentialsStatus('❌ Failed to delete credentials: ' + (result.error || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            this.showSecureCredentialsStatus('❌ Error deleting credentials: ' + error.message, 'error');
+        }
+    }
+
+    showSecureCredentialsStatus(message, type) {
+        const statusDiv = document.getElementById('secureCredentialsStatus');
+        statusDiv.innerHTML = `<div class="secure-credentials-status ${type}">${message}</div>`;
+        statusDiv.style.display = 'block';
+        
+        // Auto-hide success messages after 5 seconds
+        if (type === 'success') {
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
         }
     }
 }

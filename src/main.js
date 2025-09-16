@@ -1,9 +1,10 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
+const { EC2Client, DescribeInstancesCommand, StartInstancesCommand, StopInstancesCommand, TerminateInstancesCommand } = require('@aws-sdk/client-ec2');
+const { CloudWatchClient, PutMetricAlarmCommand } = require('@aws-sdk/client-cloudwatch');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { EC2Client, StartInstancesCommand, StopInstancesCommand, DescribeInstancesCommand, TerminateInstancesCommand } = require('@aws-sdk/client-ec2');
-const { CloudWatchClient, PutMetricAlarmCommand, DeleteAlarmsCommand } = require('@aws-sdk/client-cloudwatch');
+const keytar = require('keytar');
 
 let mainWindow;
 let ec2Client;
@@ -378,6 +379,74 @@ ipcMain.handle('terminate-instance', async (event, instanceId) => {
       message: 'Instance terminated successfully'
     };
   } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Secure credential storage using OS keychain/credential manager
+const KEYTAR_SERVICE = 'aws-compute-manager';
+
+// Store credentials securely in OS keychain
+ipcMain.handle('store-credentials-secure', async (event, accessKeyId, secretAccessKey, region) => {
+  try {
+    await keytar.setPassword(KEYTAR_SERVICE, 'aws-access-key-id', accessKeyId);
+    await keytar.setPassword(KEYTAR_SERVICE, 'aws-secret-access-key', secretAccessKey);
+    await keytar.setPassword(KEYTAR_SERVICE, 'aws-region', region);
+    
+    console.log('Credentials stored securely in OS keychain');
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to store credentials securely:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Retrieve credentials securely from OS keychain
+ipcMain.handle('retrieve-credentials-secure', async (event) => {
+  try {
+    const accessKeyId = await keytar.getPassword(KEYTAR_SERVICE, 'aws-access-key-id');
+    const secretAccessKey = await keytar.getPassword(KEYTAR_SERVICE, 'aws-secret-access-key');
+    const region = await keytar.getPassword(KEYTAR_SERVICE, 'aws-region');
+    
+    if (accessKeyId && secretAccessKey && region) {
+      console.log('Credentials retrieved securely from OS keychain');
+      return { 
+        success: true, 
+        credentials: { accessKeyId, secretAccessKey, region } 
+      };
+    } else {
+      return { success: false, error: 'No stored credentials found' };
+    }
+  } catch (error) {
+    console.error('Failed to retrieve credentials securely:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Check if secure credentials exist
+ipcMain.handle('check-secure-credentials', async (event) => {
+  try {
+    const accessKeyId = await keytar.getPassword(KEYTAR_SERVICE, 'aws-access-key-id');
+    const hasCredentials = !!accessKeyId;
+    
+    return { success: true, hasCredentials };
+  } catch (error) {
+    console.error('Failed to check secure credentials:', error);
+    return { success: false, hasCredentials: false };
+  }
+});
+
+// Delete stored credentials from OS keychain
+ipcMain.handle('delete-credentials-secure', async (event) => {
+  try {
+    await keytar.deletePassword(KEYTAR_SERVICE, 'aws-access-key-id');
+    await keytar.deletePassword(KEYTAR_SERVICE, 'aws-secret-access-key');
+    await keytar.deletePassword(KEYTAR_SERVICE, 'aws-region');
+    
+    console.log('Credentials deleted from OS keychain');
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete secure credentials:', error);
     return { success: false, error: error.message };
   }
 });
