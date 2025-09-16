@@ -9,8 +9,16 @@ class AWSComputeManager {
     }
 
     initializeEventListeners() {
+        console.log('Initializing event listeners...'); // Debug log
+        
         // AWS Configuration Form
-        document.getElementById('awsConfigForm').addEventListener('submit', this.handleAWSConfig.bind(this));
+        const awsForm = document.getElementById('awsConfigForm');
+        if (awsForm) {
+            console.log('AWS form found, adding event listener'); // Debug log
+            awsForm.addEventListener('submit', this.handleAWSConfig.bind(this));
+        } else {
+            console.error('AWS form not found!'); // Debug log
+        }
         
         // Instance Management
         document.getElementById('loadInstancesBtn').addEventListener('click', this.loadInstances.bind(this));
@@ -22,9 +30,20 @@ class AWSComputeManager {
         // Auto-stop controls
         document.getElementById('autoStopTime').addEventListener('change', this.handleAutoStopChange.bind(this));
         
-        // Secure credential controls
-        document.getElementById('loadSavedCredentialsBtn').addEventListener('click', this.loadSavedCredentials.bind(this));
-        document.getElementById('deleteSavedCredentialsBtn').addEventListener('click', this.deleteSavedCredentials.bind(this));
+        // Secure credential controls - use safer approach with error handling
+        this.setupSecureCredentialListeners();
+    }
+
+    setupSecureCredentialListeners() {
+        const loadBtn = document.getElementById('loadSavedCredentialsBtn');
+        const deleteBtn = document.getElementById('deleteSavedCredentialsBtn');
+        
+        if (loadBtn) {
+            loadBtn.addEventListener('click', this.loadSavedCredentials.bind(this));
+        }
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', this.deleteSavedCredentials.bind(this));
+        }
     }
 
     async loadSavedSettings() {
@@ -49,12 +68,17 @@ class AWSComputeManager {
                     }, 500);
                 }
             }
+            
+            // Check for secure credentials after loading regular settings
+            await this.checkForSavedCredentials();
+            
         } catch (error) {
             console.warn('Could not load saved settings:', error);
         }
     }
 
     async handleAWSConfig(event) {
+        console.log('handleAWSConfig called'); // Debug log
         event.preventDefault();
         this.showLoading(true);
 
@@ -64,10 +88,14 @@ class AWSComputeManager {
             secretAccessKey: document.getElementById('secretAccessKey').value
         };
 
+        console.log('AWS Config:', { region: config.region, accessKeyId: config.accessKeyId }); // Debug log (don't log secret)
+
         const saveSecurely = document.getElementById('saveCredentialsSecure').checked;
+        console.log('Save securely:', saveSecurely); // Debug log
 
         try {
             const result = await window.electronAPI.configureAWS(config);
+            console.log('Configure AWS result:', result); // Debug log
             
             if (result.success) {
                 this.isConfigured = true;
@@ -81,6 +109,7 @@ class AWSComputeManager {
                 // Save credentials securely if checkbox is checked
                 if (saveSecurely) {
                     try {
+                        console.log('Attempting to save credentials securely...'); // Debug log
                         const secureResult = await window.electronAPI.storeCredentialsSecure(
                             config.accessKeyId, 
                             config.secretAccessKey, 
@@ -95,6 +124,7 @@ class AWSComputeManager {
                             this.showSecureCredentialsStatus('⚠️ Failed to save credentials securely: ' + secureResult.error, 'error');
                         }
                     } catch (secureError) {
+                        console.error('Secure save error:', secureError); // Debug log
                         this.showSecureCredentialsStatus('⚠️ Error saving credentials securely: ' + secureError.message, 'error');
                     }
                 }
@@ -105,6 +135,7 @@ class AWSComputeManager {
                 this.addLogEntry(`Configuration failed: ${result.error}`, 'error');
             }
         } catch (error) {
+            console.error('Configuration error:', error); // Enhanced debug log
             this.addLogEntry(`Configuration error: ${error.message}`, 'error');
         } finally {
             this.showLoading(false);

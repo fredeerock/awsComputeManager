@@ -70,6 +70,13 @@ function createWindow() {
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
   }
+
+  // Add keyboard shortcut to toggle DevTools (Cmd+Shift+I on Mac, Ctrl+Shift+I on Windows)
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if ((input.meta || input.control) && input.shift && input.key.toLowerCase() === 'i') {
+      mainWindow.webContents.toggleDevTools();
+    }
+  });
 }
 
 app.whenReady().then(createWindow);
